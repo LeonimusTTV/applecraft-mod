@@ -1,0 +1,125 @@
+name: Bug report
+description: Report a problem with AppleCraft
+assignees: ["LeonimusTTV"]
+labels: [bug]
+body:
+  - type: textarea
+    attributes:
+      label: "Problem"
+      description: "Describe the current behavior. This may include crash logs, images, or videos."
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "Steps to reproduce"
+      description: "List the steps to reproduce the problem."
+      placeholder: |
+        Launch the game, the AppleCraft tab opens
+        Press N, search for a song
+        Click the song
+        ...
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "Expected behavior"
+      description: "Describe the behavior you expect."
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: "Mod loader"
+      options:
+        - "Fabric"
+        - "NeoForge"
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: "Minecraft version"
+      placeholder: "26.3"
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: "AppleCraft version"
+      description: "Shown in the Mods menu, or in the jar file name (applecraft-fabric-26.3-**0.2.0**.jar)."
+      placeholder: "0.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: "Browser"
+      description: "The browser where the AppleCraft tab opens."
+      options:
+        - "Chrome / Edge / Brave / other Chromium browser"
+        - "Safari"
+        - "Firefox"
+        - "Other"
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: "Browser version"
+      placeholder: "Chrome 142"
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: "Operating system"
+      placeholder: "macOS 15.8"
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: "Apple Music account"
+      description: "Status shown in the AppleCraft tab."
+      options:
+        - "Signed in, with an Apple Music subscription"
+        - "Signed in, without a subscription"
+        - "Not signed in (30-second previews)"
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "Other mods"
+      description: "List the other mods you have installed, or write \"none\"."
+      placeholder: "Sodium, Iris, Mod Menu"
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "Logs"
+      description: |
+        - **Game log:** `logs/latest.log` in your Minecraft folder (or the crash report in `crash-reports/`). You can also drag and drop the file here.
+        - **Browser log:** in the AppleCraft tab, open the developer console (F12, or ⌥⌘C on Safari) and copy the lines starting with `[AppleCraft]`.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    attributes:
+      label: "Agreements"
+      description: "Check the following before submitting the bug report."
+      options:
+        - label: "My title is concise but descriptive and specific."
+          required: true
+        - label: "I am on the latest AppleCraft release."
+          required: true
+        - label: "I have searched for [existing bug reports](https://github.com/LeonimusTTV/AppleCraft/issues?q=is%3Aissue+label%3Abug)."
+          required: true
+        - label: "This is not a usage or 'How to' question."
+          required: true
+        - label: "I have made sure that my issue is not a duplicate of the pinned issues."
+          required: true
