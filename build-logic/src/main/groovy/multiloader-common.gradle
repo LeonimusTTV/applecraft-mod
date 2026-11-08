@@ -50,7 +50,8 @@ processResources {
             'neoforge_version'             : neoforge_version,
             'neoforge_loader_version_range': neoforge_loader_version_range,
             'credits'                      : credits,
-            'java_version'                 : java_version
+            'java_version'                 : java_version,
+            'worker_url'                   : project.findProperty('worker_url') ?: 'http://localhost:8787'
     ]
 
     var jsonExpandProps = expandProps.collectEntries {
@@ -61,7 +62,7 @@ processResources {
         expand expandProps
     }
 
-    filesMatching(['pack.mcmeta', 'fabric.mod.json', '*.mixins.json']) {
+    filesMatching(['pack.mcmeta', 'fabric.mod.json', '*.mixins.json', 'applecraft-build.json']) {
         expand jsonExpandProps
     }
 

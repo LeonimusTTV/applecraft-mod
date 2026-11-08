@@ -136,7 +136,7 @@ public final class PlayerBridge {
 
     private String configJson() {
         JsonObject o = new JsonObject();
-        o.addProperty("workerUrl", config.workerUrl);
+        o.addProperty("workerUrl", config.effectiveWorkerUrl());
         return o.toString();
     }
 

@@ -11,7 +11,8 @@ import java.util.HexFormat;
 
 /**
  * config/applecraft.json
- * - workerUrl : URL of the Cloudflare Worker that signs the developer token
+ * - workerUrl : optional override of the Cloudflare Worker URL. Leave it unset to use the one baked into
+ *               the jar (BuildInfo), so a Worker change in a mod update reaches everyone.
  * - port      : local player port (7531 by default; must be listed in the Worker's ALLOWED_ORIGINS)
  * - token     : random secret, generated once. It is part of the page URL, so other websites can't control
  *               the player, and an already open tab reconnects by itself when the game restarts.
@@ -20,7 +21,7 @@ import java.util.HexFormat;
 public final class BridgeConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    public String workerUrl = "http://localhost:8787"; // replace with the deployed Worker before publishing
+    public String workerUrl; // null = use BuildInfo.WORKER_URL (Gson doesn't write null fields)
     public int port = 7531;
     public String token;
     public boolean openBrowserOnStart = true;
@@ -52,6 +53,11 @@ public final class BridgeConfig {
         if (!java.util.Set.of("TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT").contains(cfg.nowPlayingPosition)) cfg.nowPlayingPosition = "TOP_LEFT";
         cfg.save();
         return cfg;
+    }
+
+    /** Worker URL actually used: the user's override if set, otherwise the one baked into the jar. */
+    public String effectiveWorkerUrl() {
+        return workerUrl != null && !workerUrl.isBlank() ? workerUrl : BuildInfo.WORKER_URL;
     }
 
     public void save() {

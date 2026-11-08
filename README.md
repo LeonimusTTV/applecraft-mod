@@ -53,7 +53,6 @@ Created on first launch in `config/applecraft.json`:
 
 ```json
 {
-  "workerUrl": "http://localhost:8787",
   "port": 7531,
   "token": "…generated…",
   "openBrowserOnStart": true,
@@ -63,7 +62,7 @@ Created on first launch in `config/applecraft.json`:
 }
 ```
 
-- `workerUrl` points to the local Worker by default (`npm run dev` in `applecraft-api`). **Before publishing, set the deployed Worker URL** as the default in `BridgeConfig.java`.
+- `workerUrl` is optional: when unset, the mod uses the Worker URL baked into the jar at build time (`http://localhost:8787` for dev builds, the deployed Worker for releases, see [Releasing](#releasing)).
 - `token` is a random secret included in the page URL, so other websites can't control your player. An already open tab reconnects by itself with it.
 - If port 7531 is taken, the mod tries 7532 and 7533 (these are allowed in the Worker's `ALLOWED_ORIGINS`).
 
@@ -87,6 +86,31 @@ Debug logs (`→`/`←` for every command sent to the page, clicks, view loads) 
 - Minecraft is no longer obfuscated and several APIs were renamed: `GuiGraphics` → `GuiGraphicsExtractor`, `render()` → `extractRenderState()`, `ResourceLocation` → `Identifier`.
 - **The left mouse button is now `1`** (`InputConstants.MOUSE_BUTTON_LEFT`), not `0`. Never hard-code it.
 - On NeoForge, client mod constructors run **before** `Minecraft.getInstance()` exists: get the config folder from the loader (`FMLPaths.CONFIGDIR`), not from Minecraft.
+
+## Releasing
+
+Releases are built and uploaded to **Modrinth** and **CurseForge** by GitHub Actions ([`.github/workflows/publish.yml`](.github/workflows/publish.yml)) using the [Mod Publish Plugin](https://modmuss50.github.io/mod-publish-plugin/).
+
+**One-time setup**
+
+1. Deploy the Worker (`applecraft-api`) and note its URL.
+2. Create the projects on Modrinth and CurseForge, then put their IDs in `gradle.properties` (`modrinth_id`, `curseforge_id`).
+3. Create the tokens:
+   - Modrinth (Settings → PATs): *Create versions*, *Read versions*, *Write versions*, *Read projects*, *Write projects* (the last two keep the project description in sync with `MODRINTH.md`).
+   - CurseForge: Account → API tokens.
+4. In the GitHub repo (Settings → Secrets and variables → Actions): secrets `MODRINTH_TOKEN` and `CURSEFORGE_TOKEN`, variable `WORKER_URL`.
+
+**Publishing a version**
+
+1. Bump `version` in `gradle.properties` (optional: the release tag wins anyway).
+2. Create a GitHub release with a tag like `v0.2.0` and write the changelog in its description. Tick *pre-release* to publish it as a beta.
+3. The workflow builds both jars, uploads them to Modrinth and CurseForge with that changelog, updates the Modrinth description, and attaches the jars to the GitHub release.
+
+To test the whole pipeline without uploading anything: *Actions → Publish → Run workflow* (dry run is on by default), or locally `DRY_RUN=true ./gradlew build publishMods`.
+
+The jar gets the Worker URL at build time (`-Pworker_url`, stored in `applecraft-build.json`); publishing refuses anything that isn't `https://`, so a jar pointing to `localhost` can't be released by mistake. Players can still override it with `workerUrl` in `config/applecraft.json`.
+
+`MODRINTH.md` is the player-facing description: it's pushed to Modrinth automatically; for CurseForge, paste it once in the project description (CurseForge has no API for that).
 
 ## License
 
