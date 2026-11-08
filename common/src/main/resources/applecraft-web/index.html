@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>AppleCraft</title>
+<link rel="icon" type="image/png" href="/favicon.png" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { color-scheme: dark; --bg:#0f0f11; --card:#1b1b1f; --line:#2a2a30; --muted:#9a9aa3; --accent:#fa2d48; --ok:#3ddc84; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; font:15px/1.5 -apple-system, system-ui, sans-serif; background:var(--bg); color:#eee; }
+  .card { width:min(440px, 92vw); background:var(--card); border:1px solid var(--line); border-radius:18px; padding:28px; }
+  h1 { margin:0 0 4px; font-size:22px; letter-spacing:-.01em; display:flex; align-items:center; gap:10px; }
+  h1 img { width:40px; height:40px; image-rendering:pixelated; }
+  h1 span { color:var(--accent); }
+  .muted { color:var(--muted); font-size:13px; }
+  .row { display:flex; align-items:center; gap:10px; margin-top:14px; }
+  .dot { width:9px; height:9px; border-radius:50%; background:#555; flex:none; }
+  .dot.on { background:var(--ok); box-shadow:0 0 0 4px #3ddc8422; }
+  button { font:inherit; border:0; border-radius:10px; padding:10px 16px; cursor:pointer; background:#2a2a30; color:#eee; }
+  button.primary { background:var(--accent); color:#fff; font-weight:600; }
+  button:hover { filter:brightness(1.1); }
+  #now { display:flex; gap:14px; align-items:center; margin-top:22px; padding:12px; border-radius:12px; background:#141417; }
+  #now img { width:64px; height:64px; border-radius:8px; background:#2a2a30; object-fit:cover; }
+  #nowTitle { font-weight:600; }
+  .banner { margin-top:18px; padding:14px; border-radius:12px; background:#fa2d4818; border:1px solid #fa2d4855; }
+  .banner button { margin-top:10px; width:100%; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1><img src="/logo.png" alt="" />Apple<span>Craft</span></h1>
+  <div class="muted">Laisse cet onglet ouvert : c'est lui qui joue ta musique pendant que tu joues.</div>
+
+  <div id="noToken" class="banner" hidden>
+    Ouvre cette page depuis Minecraft : bouton <b>« Ouvrir le lecteur »</b> dans l'écran AppleCraft.
+  </div>
+  <div id="badConfig" class="banner" hidden>
+    Impossible de joindre le Worker (<code id="workerUrl"></code>). Vérifie <code>workerUrl</code> dans <code>config/applecraft.json</code>, puis relance le jeu.
+  </div>
+  <div id="replaced" class="banner" hidden>Le lecteur est ouvert dans un autre onglet. Tu peux fermer celui-ci.</div>
+
+  <div class="row"><div class="dot" id="dotMc"></div><span id="mcStatus">Connexion à Minecraft…</span></div>
+  <div class="row"><div class="dot" id="dotAm"></div><span id="amStatus">Chargement de MusicKit…</span></div>
+
+  <div class="row">
+    <button class="primary" id="login" hidden>Se connecter à Apple Music</button>
+    <button id="logout" hidden>Se déconnecter</button>
+  </div>
+
+  <div id="gesture" class="banner" hidden>
+    <b>Un clic pour autoriser le son.</b><br />
+    Les navigateurs (et Apple Music) bloquent le son tant que tu n'as pas lancé la lecture toi-même. Clique sur le bouton : ça reste valable tant que cet onglet est ouvert, même si tu relances le jeu.
+    <button class="primary" id="gestureBtn">🔊  Activer le son</button>
+  </div>
+
+  <div id="now" hidden>
+    <img id="nowArt" alt="" />
+    <div><div id="nowTitle"></div><div class="muted" id="nowSub"></div></div>
+  </div>
+</div>
+
+<script src="/bridge.js"></script>
+<script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js" data-web-components async></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const token = new URLSearchParams(location.search).get("t");
+if (!token) $("noToken").hidden = false;
+
+// --- Sound: autoplay policy -------------------------------------------------------------------
+// MusicKit requires its play() to be called DURING a real click at least once. A click anywhere else on
+// the page is not enough, so sound only counts as unlocked once playback has actually started.
+let unlocked = false;   // playback has really started in this tab
+let primed = false;     // button clicked while the queue was empty: try to play directly next time
+let pendingTitle = null;
+const unlockListeners = [];
+window.audioUnlocked = () => unlocked;
+window.isAutoplayError = (e) => e?.name === "NotAllowedError" ||
+  /not allowed|denied permission|user gesture|user interaction|automatically started/i.test(String(e?.message ?? e));
+
+// Blinking tab title (we can't steal focus from the game).
+let blink = null;
+const setBlink = (on) => {
+  clearInterval(blink); blink = null; document.title = "AppleCraft";
+  if (on) { let t = false; blink = setInterval(() => { t = !t; document.title = t ? "🔇 Clique ici pour le son" : "AppleCraft"; }, 900); }
+};
+const showGesture = (title) => {
+  if (unlocked) return;
+  if (title) pendingTitle = title;
+  $("gesture").hidden = false;
+  $("gestureBtn").textContent = pendingTitle ? `▶  Lancer « ${pendingTitle} »` : "🔊  Activer le son";
+  setBlink(pendingTitle != null);
+};
+const markUnlocked = () => {
+  if (unlocked) return;
+  unlocked = true; pendingTitle = null;
+  $("gesture").hidden = true; setBlink(false);
+  unlockListeners.forEach((l) => l());
+};
+
+$("gestureBtn").onclick = () => {
+  const music = window.__music;
+  if (!music) return;
+  // play() must run directly inside the click, with no await before it (required by MusicKit and Safari).
+  if (music.queue && !music.queue.isEmpty) {
+    const p = music.play();
+    Promise.resolve(p).catch((e) => { console.warn("[AppleCraft] playback on click rejected", e); showGesture(); });
+    return;
+  }
+  // Empty queue: "wake up" MusicKit's media element; the next track will try to start on its own.
+  document.querySelectorAll("audio, video").forEach((el) => {
+    const p = el.play();
+    p?.then(() => el.pause()).catch(() => {});
+  });
+  primed = true;
+  $("gestureBtn").textContent = "✓  Prêt : lance une musique depuis Minecraft";
+};
+
+const ui = {
+  audioUnlocked: () => unlocked,
+  canTryPlay: () => unlocked || primed,
+  needGesture: (title) => { primed = false; showGesture(title); },
+  isAutoplayError: (e) => window.isAutoplayError(e),
+  onUnlock(l) { unlockListeners.push(l); },
+  connected(on) {
+    $("dotMc").classList.toggle("on", on);
+    $("mcStatus").textContent = on ? "Connecté à Minecraft" : "Minecraft n'est pas lancé (reconnexion auto)";
+  },
+  replaced() { $("replaced").hidden = false; ui.connected(false); },
+};
+showGesture(); // ask right away when the tab opens
+
+document.addEventListener("musickitloaded", async () => {
+  try {
+    const { workerUrl } = await (await fetch("/config.json")).json();
+    const workerError = (msg) => { $("workerUrl").textContent = workerUrl; $("badConfig").hidden = false; return new Error(msg); };
+    const res = await fetch(`${workerUrl}/token`).catch(() => { throw workerError("Worker injoignable"); });
+    if (!res.ok) throw workerError(`Worker HTTP ${res.status}`);
+    const { token: developerToken } = await res.json();
+
+    await MusicKit.configure({
+      developerToken,
+      app: { name: "AppleCraft", build: "0.1.0" },
+      // Otherwise MusicKit shows its own error dialog in the page (e.g. sound blocked by the browser).
+      suppressErrorDialog: true,
+    });
+    const music = MusicKit.getInstance();
+
+    window.__music = music;
+    // Unlocked as soon as playback really starts.
+    music.addEventListener("playbackStateDidChange", () => { if (music.isPlaying) markUnlocked(); });
+    // Playback errors land here instead of MusicKit's dialog.
+    music.addEventListener("mediaPlaybackError", (e) => {
+      const err = e?.error ?? e;
+      console.warn("[AppleCraft] MusicKit playback error", err);
+      if (window.isAutoplayError(err)) ui.needGesture(music.nowPlayingItem?.attributes?.name);
+    });    music.volume = 0.5;
+
+    const refresh = () => {
+      const ok = music.isAuthorized;
+      $("dotAm").classList.toggle("on", ok);
+      $("amStatus").textContent = ok ? "Connecté à Apple Music" : "Pas connecté : extraits de 30 s seulement";
+      $("login").hidden = ok; $("logout").hidden = !ok;
+    };
+    const renderNow = () => {
+      const it = music.nowPlayingItem;
+      $("now").hidden = !it;
+      if (!it) return;
+      $("nowArt").src = it.attributes?.artwork?.url?.replace("{w}", 128).replace("{h}", 128) ?? "";
+      $("nowTitle").textContent = it.attributes?.name ?? it.title;
+      $("nowSub").textContent = `${it.attributes?.artistName ?? ""} — ${it.attributes?.albumName ?? ""}`;
+    };
+    music.addEventListener("authorizationStatusDidChange", refresh);
+    music.addEventListener("nowPlayingItemDidChange", renderNow);
+    $("login").onclick = () => music.authorize().catch(() => {});
+    $("logout").onclick = () => music.unauthorize().then(refresh);
+    refresh(); renderNow();
+
+    if (token) startBridge(music, token, ui);
+  } catch (e) {
+    $("amStatus").textContent = "Erreur : " + e.message;
+  }
+});
+</script>
+</body>
+</html>
