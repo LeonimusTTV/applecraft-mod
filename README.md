@@ -1,4 +1,4 @@
-<p align="center"><img src="common/src/main/resources/applecraft.png" width="96" alt="AppleCraft logo" /></p>
+<p align="center"><img src="images/social-preview.png" alt="AppleCraft: Apple Music in Minecraft" /></p>
 
 # AppleCraft
 
