@@ -9,29 +9,16 @@ import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.HexFormat;
 
-/**
- * config/applecraft.json
- * - workerUrl : optional override of the Cloudflare Worker URL. Leave it unset to use the one baked into
- *               the jar (BuildInfo), so a Worker change in a mod update reaches everyone.
- * - port      : local player port (7531 by default; must be listed in the Worker's ALLOWED_ORIGINS)
- * - token     : random secret, generated once. It is part of the page URL, so other websites can't control
- *               the player, and an already open tab reconnects by itself when the game restarts.
- * - openBrowserOnStart : open the page automatically if no tab reconnects
- */
 public final class BridgeConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    public String workerUrl; // null = use BuildInfo.WORKER_URL (Gson doesn't write null fields)
+    public String workerUrl; // null = use BuildInfo.WORKER_URL
     public int port = 7531;
     public String token;
     public boolean openBrowserOnStart = true;
 
-    // --- In-game display (editable in AppleCraft → Settings)
-    /** Small "now playing" card in the HUD. */
     public boolean showNowPlaying = true;
-    /** TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT */
     public String nowPlayingPosition = "TOP_LEFT";
-    /** Message above the hotbar when the track changes. */
     public boolean showTrackChangeMessage = true;
 
     private transient Path file;

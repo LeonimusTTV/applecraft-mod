@@ -7,10 +7,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-/**
- * Values baked into the jar at build time (applecraft-build.json, expanded by Gradle from gradle.properties
- * or -P flags). Release builds set the deployed Worker URL here, so players never have to configure it.
- */
 public final class BuildInfo {
     private BuildInfo() {}
 

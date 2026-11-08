@@ -2,7 +2,6 @@ package com.leonimust.applecraft.bridge;
 
 import java.util.List;
 
-/** JSON types of the protocol (see PROTOCOL.md). Gson can fill records directly. */
 public final class Models {
     private Models() {}
 

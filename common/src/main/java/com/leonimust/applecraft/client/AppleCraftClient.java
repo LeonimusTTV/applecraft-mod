@@ -66,8 +66,6 @@ public final class AppleCraftClient {
         while (PREV.consumeClick()) run(bridge::prev);
     }
 
-    // ------------------------------------------------------------------------
-
     private static void run(Supplier<? extends CompletableFuture<?>> action) {
         action.get().exceptionally(err -> {
             String code = AppleCraftScreen.errorCode(err);

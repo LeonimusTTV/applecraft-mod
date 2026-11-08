@@ -30,17 +30,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
-/**
- * Local player server embedded in the mod.
- *
- *   GET  /                 MusicKit page (inside the jar, applecraft-web/ folder)
- *   GET  /config.json      { workerUrl }
- *   GET  /events?t=TOKEN   Server-Sent Events: mod → page commands
- *   POST /reply?t=TOKEN    page → mod: { type: "result" | "state", ... }
- *
- * Everything uses the JDK (com.sun.net.httpserver): no dependency to bundle.
- * Message format is described in PROTOCOL.md.
- */
 public final class PlayerBridge {
 
     public static final String ERR_SERVER_NOT_RUNNING = "server_not_running";
@@ -74,8 +63,6 @@ public final class PlayerBridge {
         this.config = config;
         this.browserOpener = browserOpener;
     }
-
-    // ================================================================ lifecycle
 
     /** Starts the local server. If no tab reconnects within 4 s, opens the browser. */
     public synchronized void start() {
@@ -131,8 +118,6 @@ public final class PlayerBridge {
             Constants.LOG.warn("Could not open the browser, open {} manually", playerUri(), e);
         }
     }
-
-    // ================================================================ HTTP
 
     private String configJson() {
         JsonObject o = new JsonObject();
@@ -242,8 +227,6 @@ public final class PlayerBridge {
         }
     }
 
-    // ================================================================ messages from the page
-
     private void handle(JsonObject msg) {
         String type = msg.has("type") ? msg.get("type").getAsString() : "";
         switch (type) {
@@ -267,8 +250,6 @@ public final class PlayerBridge {
         status = s;
         for (var l : statusListeners) l.accept(s);
     }
-
-    // ================================================================ sending
 
     /** Sends a raw command. The future fails with {@link BridgeException} (error code in getMessage()). */
     public CompletableFuture<JsonElement> send(String action, JsonObject params) {
@@ -323,8 +304,6 @@ public final class PlayerBridge {
         return o;
     }
 
-    // ================================================================ typed API
-
     public CompletableFuture<JsonElement> play() { return send("play", null); }
     public CompletableFuture<JsonElement> pause() { return send("pause", null); }
     public CompletableFuture<JsonElement> toggle() { return send("toggle", null); }
@@ -355,8 +334,6 @@ public final class PlayerBridge {
     }
     public CompletableFuture<List<Models.Item>> libraryPlaylists() { return send("libraryPlaylists", null, ITEMS); }
     public CompletableFuture<List<Models.Item>> recentlyPlayed() { return send("recentlyPlayed", null, ITEMS); }
-
-    // ================================================================ state
 
     public BridgeConfig config() { return config; }
     public Models.State state() { return state; }

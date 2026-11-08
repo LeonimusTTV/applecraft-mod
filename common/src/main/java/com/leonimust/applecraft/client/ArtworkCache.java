@@ -16,11 +16,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * Downloads artwork (PNG, see bridge.js) and turns it into Minecraft textures.
- * get() returns null until the image is ready: callers draw a placeholder meanwhile.
- * LRU cache: beyond MAX textures, the oldest ones are released.
- */
 public final class ArtworkCache {
     private ArtworkCache() {}
 

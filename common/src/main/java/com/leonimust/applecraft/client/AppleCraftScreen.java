@@ -20,20 +20,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
 
-/**
- * Main screen. "Immediate mode" rendering: everything is redrawn every frame and clickable areas
- * are recorded while drawing (the hits list). Only the search box is a vanilla widget.
- *
- *  ┌──────────┬──────────────────────────────────────┐
- *  │ sidebar  │ content (scrollable)                 │
- *  │          │                                      │
- *  ├──────────┴──────────────────────────────────────┤
- *  │ player bar                                      │
- *  └─────────────────────────────────────────────────┘
- */
 public class AppleCraftScreen extends Screen {
 
-    // ------------------------------------------------------------------ style
     private static final int BG = 0xF00F0F11;
     private static final int SIDEBAR = 0xFF151518;
     private static final int BAR = 0xFF121215;
@@ -54,7 +42,6 @@ public class AppleCraftScreen extends Screen {
     private static final int CARD_GAP = 10;
     private static final int ROW_H = 22;
 
-    // ------------------------------------------------------------------ state
     private enum Tab { HOME, SEARCH, LIBRARY, SETTINGS }
 
     private record Hit(int x, int y, int w, int h, Runnable action) {
@@ -87,8 +74,6 @@ public class AppleCraftScreen extends Screen {
         super(Component.translatable("applecraft.ui.title"));
     }
 
-    // ================================================================== lifecycle
-
     @Override
     protected void init() {
         int cx = SIDEBAR_W + PAD;
@@ -116,8 +101,6 @@ public class AppleCraftScreen extends Screen {
     public boolean isPauseScreen() {
         return false;
     }
-
-    // ================================================================== navigation
 
     private void openTab(Tab tab) {
         lastTab = tab;
@@ -157,8 +140,6 @@ public class AppleCraftScreen extends Screen {
             default -> push(collectionView(item)); // album, playlist
         }
     }
-
-    // ================================================================== views
 
     /** A page: a title, a tab, and content blocks loaded asynchronously. */
     private final class View {
@@ -292,8 +273,6 @@ public class AppleCraftScreen extends Screen {
         return new Message(tr("applecraft.ui.login_needed"), tr("applecraft.ui.open_player"), bridge::openPlayerPage);
     }
 
-    // ================================================================== content blocks
-
     private sealed interface Block permits Section, Grid, Rows, Header, Message, Toggle, Choice {}
     private record Toggle(String label, String desc, java.util.function.BooleanSupplier get, java.util.function.Consumer<Boolean> set) implements Block {}
     private record Choice(String label, String desc, List<String> values, Supplier<String> get, java.util.function.Consumer<String> set) implements Block {}
@@ -303,8 +282,6 @@ public class AppleCraftScreen extends Screen {
     private record Rows(List<Item> items, Item container) implements Block {}
     private record Header(Item item, int trackCount) implements Block {}
     private record Message(String text, String button, Runnable action) implements Block {}
-
-    // ================================================================== rendering
 
     @Override
     public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
@@ -333,8 +310,6 @@ public class AppleCraftScreen extends Screen {
 
         super.extractRenderState(g, mouseX, mouseY, partialTick); // widgets (search box)
     }
-
-    // ---------------------------------------------------------------- sidebar
 
     private void renderSidebar(GuiGraphicsExtractor g, int mx, int my, Models.Status status) {
         g.fill(0, 0, SIDEBAR_W, height - BAR_H, SIDEBAR);
@@ -383,8 +358,6 @@ public class AppleCraftScreen extends Screen {
         hits.add(new Hit(x0, y, x1 - x0, h, () -> openTab(tab)));
         return y + h + 2;
     }
-
-    // ---------------------------------------------------------------- content
 
     private void renderContent(GuiGraphicsExtractor g, int mx, int my, Models.Status status) {
         int x0 = SIDEBAR_W + PAD, x1 = width - PAD;
@@ -585,8 +558,6 @@ public class AppleCraftScreen extends Screen {
         };
     }
 
-    // ---------------------------------------------------------------- player bar
-
     private void renderPlayerBar(GuiGraphicsExtractor g, int mx, int my) {
         int top = height - BAR_H;
         g.fill(0, top, width, height, BAR);
@@ -662,8 +633,6 @@ public class AppleCraftScreen extends Screen {
         hits.add(new Hit(x, y, 18, 16, action));
     }
 
-    // ---------------------------------------------------------------- small components
-
     private void pill(GuiGraphicsExtractor g, int mx, int my, int x, int y, int w, String label, Runnable action) {
         pill(g, mx, my, x, y, w, label, action, false);
     }
@@ -690,8 +659,6 @@ public class AppleCraftScreen extends Screen {
             if (size >= 24) g.text(font, "♪", x + size / 2 - 3, y + size / 2 - 4, 0xFF55555E, false);
         }
     }
-
-    // ================================================================== input
 
     @Override
     public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
@@ -768,8 +735,6 @@ public class AppleCraftScreen extends Screen {
         if (!typing && AppleCraftClient.OPEN_SCREEN != null && AppleCraftClient.OPEN_SCREEN.matches(e)) { onClose(); return true; }
         return super.keyPressed(e);
     }
-
-    // ================================================================== utilities
 
     private void playClick() {
         net.minecraft.client.gui.components.AbstractWidget.playButtonClickSound(minecraft.getSoundManager());
