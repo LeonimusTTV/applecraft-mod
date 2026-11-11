@@ -40,6 +40,7 @@ processResources {
             'group'                        : project.group, //Else we target the task's group.
             'minecraft_version'            : minecraft_version,
             'minecraft_version_range'      : minecraft_version_range,
+            'fabric_minecraft_range'       : fabric_minecraft_range,
             'fabric_version'               : fabric_version,
             'fabric_loader_version'        : fabric_loader_version,
             'mod_name'                     : mod_name,
@@ -49,6 +50,7 @@ processResources {
             'description'                  : project.description,
             'neoforge_version'             : neoforge_version,
             'neoforge_loader_version_range': neoforge_loader_version_range,
+            'neoforge_version_range'       : neoforge_version_range,
             'credits'                      : credits,
             'java_version'                 : java_version,
             'worker_url'                   : project.findProperty('worker_url') ?: 'http://localhost:8787'

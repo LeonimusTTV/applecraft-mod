@@ -13,6 +13,9 @@ plugins {
 // ---------------------------------------------------------------------------------------------------------------
 def releaseType = System.getenv('RELEASE_TYPE') ?: 'stable'   // stable | beta | alpha
 
+def mcVersions = supported_versions.split(',')*.trim()
+def mcLabel = mcVersions.size() > 1 ? "${mcVersions.first()}-${mcVersions.last()}" : mcVersions.first()
+
 publishMods {
     changelog = providers.environmentVariable('CHANGELOG').orElse('See the GitHub release for details.')
     type = releaseType == 'beta' ? BETA : releaseType == 'alpha' ? ALPHA : STABLE
@@ -21,7 +24,7 @@ publishMods {
     def cf = curseforgeOptions {
         accessToken = providers.environmentVariable('CURSEFORGE_TOKEN')
         projectId = curseforge_id ?: 'unset'
-        minecraftVersions.add(minecraft_version)
+        minecraftVersions.addAll(mcVersions)
         javaVersions.add(JavaVersion.toVersion(java_version))
         client = true    // client-side mod: not needed on servers
         server = false
@@ -30,7 +33,7 @@ publishMods {
     def mr = modrinthOptions {
         accessToken = providers.environmentVariable('MODRINTH_TOKEN')
         projectId = modrinth_id ?: 'unset'
-        minecraftVersions.add(minecraft_version)
+        minecraftVersions.addAll(mcVersions)
         environment = CLIENT_ONLY
         // Keeps the Modrinth page in sync with MODRINTH.md on every release
         projectDescription = providers.fileContents(layout.projectDirectory.file('MODRINTH.md')).asText
@@ -40,30 +43,30 @@ publishMods {
         from cf
         file project(':fabric')
         modLoaders.add('fabric')
-        displayName = "AppleCraft ${project.version} (Fabric ${minecraft_version})".toString()
+        displayName = "[${mcLabel}] AppleCraft Fabric ${project.version}".toString()
         requires('fabric-api')
     }
     curseforge('curseforgeNeoForge') {
         from cf
         file project(':neoforge')
         modLoaders.add('neoforge')
-        displayName = "AppleCraft ${project.version} (NeoForge ${minecraft_version})".toString()
+        displayName = "[${mcLabel}] AppleCraft NeoForge ${project.version}".toString()
     }
 
     modrinth('modrinthFabric') {
         from mr
         file project(':fabric')
         modLoaders.add('fabric')
-        version = "${project.version}+${minecraft_version}-fabric".toString()
-        displayName = "AppleCraft ${project.version} (Fabric ${minecraft_version})".toString()
+        version = "${project.version}+${mcLabel}-fabric".toString()
+        displayName = "AppleCraft ${project.version} (Fabric ${mcLabel})".toString()
         requires('fabric-api')
     }
     modrinth('modrinthNeoForge') {
         from mr
         file project(':neoforge')
         modLoaders.add('neoforge')
-        version = "${project.version}+${minecraft_version}-neoforge".toString()
-        displayName = "AppleCraft ${project.version} (NeoForge ${minecraft_version})".toString()
+        version = "${project.version}+${mcLabel}-neoforge".toString()
+        displayName = "AppleCraft ${project.version} (NeoForge ${mcLabel})".toString()
     }
 }
 
