@@ -45,7 +45,7 @@ Is my Apple account safe?
 You sign in on Apple's own page. The mod never sees your password, and everything runs on your computer: the game talks to the tab through "localhost" only.
 
 Fabric or NeoForge?
-Both, on Minecraft 26.3. More versions are planned.
+Both, on Minecraft 26.1, 26.2 and 26.3. 1.21.1 is planned.
 
 ## License
 

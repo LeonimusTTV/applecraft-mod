@@ -4,7 +4,7 @@
 
 Listen to **Apple Music** inside Minecraft: search, browse your playlists, and control playback without leaving the game.
 
-Minecraft **26.3** · **Fabric** and **NeoForge** · Java **25** · based on the [MultiLoader-Template](https://github.com/jaredlll08/MultiLoader-Template).
+Minecraft **26.1 → 26.3** · **Fabric** and **NeoForge** · Java **25** · one codebase for every version thanks to [Stonecutter](https://stonecutter.kikugie.dev).
 
 > An Apple Music subscription is required for full tracks. Without signing in, search works but playback is limited to 30-second previews.
 
@@ -24,13 +24,13 @@ Minecraft (mod) ──SSE / POST──▶ http://localhost:7531 (served by the m
 4. The mod sends commands (search, play, pause…) to the page and receives the playback state back. See [PROTOCOL.md](PROTOCOL.md).
 
 ```
-common/src/main/java/.../bridge/PlayerBridge.java    local server + typed Java API (search, playItem, …)
-common/src/main/java/.../bridge/BridgeConfig.java    config/applecraft.json
-common/src/main/java/.../client/AppleCraftScreen.java  main screen (immediate-mode rendering)
-common/src/main/java/.../client/NowPlayingHud.java   "now playing" HUD card
-common/src/main/java/.../client/ArtworkCache.java    artwork → Minecraft textures
-common/src/main/resources/applecraft-web/            player page (bundled in the jar)
-fabric/, neoforge/                                   ~20 lines each: keys, HUD layer, tick event
+src/main/java/.../bridge/PlayerBridge.java       local server + typed Java API (search, playItem, …)
+src/main/java/.../bridge/BridgeConfig.java       config/applecraft.json
+src/main/java/.../client/AppleCraftScreen.java   main screen (immediate-mode rendering)
+src/main/java/.../client/NowPlayingHud.java      "now playing" HUD card
+src/main/java/.../client/ArtworkCache.java       artwork → Minecraft textures
+src/main/java/.../platform/fabric, neoforge      ~20 lines each: keys, HUD layer, tick event
+src/main/resources/applecraft-web/               player page (bundled in the jar)
 ```
 
 ## Using it
@@ -75,15 +75,38 @@ Requirements: **JDK 25** ([Eclipse Temurin](https://adoptium.net), `brew install
 npm run dev                      # local Worker on http://localhost:8787
 
 # in this folder
-./gradlew :fabric:runClient      # or :neoforge:runClient
-./gradlew build                  # → fabric/build/libs and neoforge/build/libs
+./gradlew :26.3-fabric:runClient     # or :26.2-neoforge:runClient, …
+./gradlew build                      # every version → versions/<mc>-<loader>/build/libs
+./gradlew :26.3-fabric:build         # a single one
 ```
+
+### Several Minecraft versions (Stonecutter)
+
+There is a single `src/`, built once per Minecraft version and loader. Each build is a Gradle project named `<mc>-<loader>` (`26.1.2-fabric`, `26.3-neoforge`, …), listed in `settings.gradle.kts`, with its own values (Fabric API / NeoForge version, accepted Minecraft range, versions ticked on Modrinth and CurseForge) in `versions/<mc>-<loader>/gradle.properties`.
+
+When the code differs between versions or loaders, it's written with Stonecutter comments. Stonecutter comments out the lines that don't apply before compiling:
+
+```java
+//? if >=26.2 {
+return mc.gui.screen();
+//?} else {
+/*return mc.screen;
+*///?}
+```
+
+`//? if fabric {` / `//? if neoforge {` work the same way (the loader entrypoints in `platform/` are wrapped whole).
+
+`src/` is always written for the **active** version (`.sc_active_version`, `26.3-fabric` in git). To work on another one, run the *Set active project to …* task in the `stonecutter` group (IntelliJ's Gradle panel): it rewrites the comments so that version's code is the uncommented one. Switch back to `26.3-fabric` before committing.
+
+Adding a Minecraft version: add it to `settings.gradle.kts`, create its `versions/<mc>-<loader>/gradle.properties`, build, and fix what doesn't compile with `//? if` blocks.
+
+`-Pneoforge_skip_decompile=true` skips decompiling Minecraft for NeoForge: much faster and lighter, but no Minecraft sources in the IDE. CI uses it.
 
 Debug logs (`→`/`←` for every command sent to the page, clicks, view loads) are at DEBUG level.
 
 ### Things worth knowing about Minecraft 26.x
 
-- Minecraft is no longer obfuscated and several APIs were renamed: `GuiGraphics` → `GuiGraphicsExtractor`, `render()` → `extractRenderState()`, `ResourceLocation` → `Identifier`.
+- Minecraft is no longer obfuscated and several APIs were renamed (and keep moving between 26.x versions, see the `//? if` blocks): `GuiGraphics` → `GuiGraphicsExtractor`, `render()` → `extractRenderState()`, `ResourceLocation` → `Identifier`.
 - **The left mouse button is now `1`** (`InputConstants.MOUSE_BUTTON_LEFT`), not `0`. Never hard-code it.
 - On NeoForge, client mod constructors run **before** `Minecraft.getInstance()` exists: get the config folder from the loader (`FMLPaths.CONFIGDIR`), not from Minecraft.
 
@@ -104,7 +127,7 @@ Releases are built and uploaded to **Modrinth** and **CurseForge** by GitHub Act
 
 1. Bump `version` in `gradle.properties` (optional: the release tag wins anyway).
 2. Create a GitHub release with a tag like `v0.2.0` and write the changelog in its description. Tick *pre-release* to publish it as a beta.
-3. The workflow builds both jars, uploads them to Modrinth and CurseForge with that changelog, updates the Modrinth description, and attaches the jars to the GitHub release.
+3. The workflow builds every jar (one per Minecraft version and loader), uploads them to Modrinth and CurseForge with that changelog, updates the Modrinth description, and attaches the jars to the GitHub release.
 
 To test the whole pipeline without uploading anything: *Actions → Publish → Run workflow* (dry run is on by default), or locally `DRY_RUN=true ./gradlew build publishMods`.
 

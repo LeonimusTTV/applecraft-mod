@@ -65,7 +65,7 @@ jobs:
 
       - name: Build and publish
         run: >
-          ./gradlew build publishMods --stacktrace
+          ./gradlew build publishMods --stacktrace -Pneoforge_skip_decompile=true
           -Pversion=${{ steps.v.outputs.version }}
           -Pworker_url=${{ vars.WORKER_URL || 'http://localhost:8787' }}
         env:
@@ -82,8 +82,7 @@ jobs:
         run: |
           V="${{ steps.v.outputs.version }}"
           gh release upload "$GITHUB_REF_NAME" \
-            fabric/build/libs/applecraft-fabric-*-"$V".jar \
-            neoforge/build/libs/applecraft-neoforge-*-"$V".jar \
+            versions/*/build/libs/applecraft-*-"$V".jar \
             --clobber
 
       - name: Keep the jars (dry runs)
@@ -92,5 +91,4 @@ jobs:
         with:
           name: applecraft-${{ steps.v.outputs.version }}
           path: |
-            fabric/build/libs/*.jar
-            neoforge/build/libs/*.jar
+            versions/*/build/libs/*.jar

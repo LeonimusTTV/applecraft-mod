@@ -1,0 +1,28 @@
+{
+    "schemaVersion": 1,
+    "id": "${mod_id}",
+    "version": "${version}",
+    "name": "${mod_name}",
+    "description": "${description}",
+    "authors": [
+        "${mod_author}"
+    ],
+    "contact": {
+        "homepage": "https://github.com/LeonimusTTV",
+        "sources": "https://github.com/LeonimusTTV/AppleCraft"
+    },
+    "license": "${license}",
+    "icon": "${mod_id}.png",
+    "environment": "client",
+    "entrypoints": {
+        "client": [
+            "com.leonimust.applecraft.platform.fabric.AppleCraftFabricClient"
+        ]
+    },
+    "depends": {
+        "fabricloader": ">=${fabric_loader_version}",
+        "fabric-api": "*",
+        "minecraft": "${minecraft_range}",
+        "java": ">=${java_version}"
+    }
+}

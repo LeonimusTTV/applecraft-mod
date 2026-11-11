@@ -9,11 +9,11 @@ All contributions should be made in accordance with our [Code of Conduct](./CODE
 - **Report a bug**: [open a bug report](https://github.com/LeonimusTTV/AppleCraft/issues/new?template=bug_report.yml)
 - **Suggest a feature**: [open a feature request](https://github.com/LeonimusTTV/AppleCraft/issues/new?template=feature_request.yml)
 - **Fix a bug or improve the mod**: for small fixes, feel free to open a PR directly; for larger changes, open an issue first to discuss
-- **Translate the mod**: add a file in `common/src/main/resources/assets/applecraft/lang/` (copy `en_us.json`)
+- **Translate the mod**: add a file in `src/main/resources/assets/applecraft/lang/` (copy `en_us.json`)
 
 ## Getting started
 
-See the [Development](README.md#development) section of the README. In short: JDK 25 (plus JDK 21 for NeoForge's tooling), run the Worker locally with `npm run dev` in `applecraft-api`, then `./gradlew :fabric:runClient` or `./gradlew :neoforge:runClient`.
+See the [Development](README.md#development) section of the README. In short: JDK 25 (plus JDK 21 for NeoForge's tooling), run the Worker locally with `npm run dev` in `applecraft-api`, then `./gradlew :26.3-fabric:runClient` or `./gradlew :26.3-neoforge:runClient`.
 
 Code that doesn't depend on the mod loader goes in `common/`. The `fabric/` and `neoforge/` folders should stay as small as possible.
 
