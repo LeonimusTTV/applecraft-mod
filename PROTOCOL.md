@@ -9,6 +9,8 @@ The mod runs a local HTTP server (default `http://localhost:7531`). The player p
 
 `TOKEN` is the random secret from `config/applecraft.json` (it's in the page URL). Wrong or missing token → `403`. Only one page is active at a time: when a new tab connects, the previous one receives `{ "type": "replaced" }`.
 
+The page also adds `&load=ID&nav=TYPE` to `/events` for diagnostics only: `ID` is random per page load and `TYPE` is the navigation type (`navigate`, `reload`, `back_forward`). The mod logs them, so a reconnection of the same page (same `ID`) can be told apart from a real reload. The stream starts with `retry: 1000`, so a tab left open reconnects 1 s after the game restarts; the mod only opens the browser if no tab has connected 8 s after starting.
+
 Other endpoints: `GET /` (player page), `GET /config.json` → `{ "workerUrl": "…" }`, plus the page's static files.
 
 ## Commands (mod → page)

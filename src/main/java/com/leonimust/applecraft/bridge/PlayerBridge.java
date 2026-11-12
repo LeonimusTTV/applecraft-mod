@@ -38,6 +38,14 @@ public final class PlayerBridge {
     private static final Gson GSON = new Gson();
     private static final long REQUEST_TIMEOUT_MS = 20_000;
     private static final long KEEPALIVE_MS = 3_000; // detect a closed tab quickly
+    /** Sent as the SSE "retry" field: a tab left open reconnects 1 s after the game restarts (WebKit's default is 3 s). */
+    private static final long SSE_RETRY_MS = 1_000;
+    /**
+     * Time a tab left open gets to reconnect before the browser is opened. Opening the URL while a tab is about to
+     * reconnect either reloads that tab (Safari reuses the tab with the same URL) or opens a second one that then
+     * replaces it: both lose the click that unlocked sound. Must stay well above the reconnect delay (3 s by default).
+     */
+    private static final long OPEN_BROWSER_GRACE_S = 8;
     private static final String WEB_ROOT = "/applecraft-web";
 
     private final BridgeConfig config;
@@ -55,6 +63,7 @@ public final class PlayerBridge {
     private volatile HttpServer server;
     private volatile int boundPort = -1;
     private volatile PageConnection page;
+    private volatile String lastLoadId; // diagnostics only (see handleEvents)
     private volatile Models.State state;
     private volatile Models.Status status = new Models.Status(false, false);
     private final java.util.concurrent.ConcurrentHashMap<String, Long> sentAt = new java.util.concurrent.ConcurrentHashMap<>();
@@ -64,7 +73,7 @@ public final class PlayerBridge {
         this.browserOpener = browserOpener;
     }
 
-    /** Starts the local server. If no tab reconnects within 4 s, opens the browser. */
+    /** Starts the local server. If no tab reconnects within {@link #OPEN_BROWSER_GRACE_S} s, opens the browser. */
     public synchronized void start() {
         if (server != null) return;
         // Fallback ports if 7531 is already taken (another Minecraft instance, …)
@@ -93,7 +102,7 @@ public final class PlayerBridge {
         Constants.LOG.info("AppleCraft player on http://localhost:{}", boundPort);
 
         if (config.openBrowserOnStart) {
-            scheduler.schedule(() -> { if (page == null) openPlayerPage(); }, 4, TimeUnit.SECONDS);
+            scheduler.schedule(() -> { if (page == null) openPlayerPage(); }, OPEN_BROWSER_GRACE_S, TimeUnit.SECONDS);
         }
     }
 
@@ -139,6 +148,19 @@ public final class PlayerBridge {
         }
     }
 
+    /** Diagnostic query parameter, kept only if short and alphanumeric (it ends up in the log). */
+    private static String queryParam(HttpExchange ex, String name) {
+        String q = ex.getRequestURI().getRawQuery();
+        if (q == null) return null;
+        for (String kv : q.split("&")) {
+            if (kv.startsWith(name + "=")) {
+                String v = kv.substring(name.length() + 1);
+                return v.matches("[A-Za-z0-9_]{1,32}") ? v : null;
+            }
+        }
+        return null;
+    }
+
     private boolean authorized(HttpExchange ex) {
         String q = ex.getRequestURI().getRawQuery();
         String t = null;
@@ -158,10 +180,18 @@ public final class PlayerBridge {
         PageConnection previous = page;
         page = conn;
         if (previous != null) previous.trySend("{\"type\":\"replaced\"}"); // only one active tab
-        Constants.LOG.info("Player page connected");
+
+        // Same load id as last time = EventSource reconnected by itself (sound stays unlocked);
+        // a new one = the page was really loaded again (reload, new tab), which needs a new click.
+        String loadId = queryParam(ex, "load");
+        String nav = queryParam(ex, "nav");
+        String kind = loadId == null ? "?" : loadId.equals(lastLoadId) ? "reconnect, same page" : "new page load";
+        if (loadId != null) lastLoadId = loadId;
+        Constants.LOG.info("Player page connected ({}, load={}, navigation={})", kind, loadId, nav);
         setStatus(new Models.Status(true, true));
 
         try {
+            conn.raw("retry: " + SSE_RETRY_MS + "\n\n"); // reconnect delay for this tab
             conn.send("{\"type\":\"hello\"}");
             while (!conn.closed) {
                 Thread.sleep(KEEPALIVE_MS);
@@ -218,7 +248,11 @@ public final class PlayerBridge {
         }
 
         synchronized void ping() throws IOException {
-            out.write(": ping\n\n".getBytes(StandardCharsets.UTF_8));
+            raw(": ping\n\n");
+        }
+
+        synchronized void raw(String text) throws IOException {
+            out.write(text.getBytes(StandardCharsets.UTF_8));
             out.flush();
         }
 

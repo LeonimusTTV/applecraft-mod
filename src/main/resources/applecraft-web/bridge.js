@@ -131,7 +131,10 @@ window.startBridge = function startBridge(music, token, ui) {
   setInterval(() => music.isPlaying && pushState(), 1000);
   ui.onUnlock(pushState); // tell the mod as soon as sound is unlocked
 
-  const es = new EventSource(`/events?t=${encodeURIComponent(token)}`);
+  const loadId = Math.random().toString(36).slice(2, 10);
+  const nav = performance.getEntriesByType?.("navigation")?.[0]?.type ?? "unknown"; // navigate | reload | back_forward
+  console.log("[AppleCraft] page load", loadId, nav);
+  const es = new EventSource(`/events?t=${encodeURIComponent(token)}&load=${loadId}&nav=${encodeURIComponent(nav)}`);
   es.onopen = () => { ui.connected(true); pushState(); };
   es.onerror = () => ui.connected(false); // EventSource reconnects by itself
   es.onmessage = async (e) => {

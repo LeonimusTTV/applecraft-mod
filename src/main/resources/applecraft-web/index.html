@@ -20,6 +20,7 @@
   button { font:inherit; border:0; border-radius:10px; padding:10px 16px; cursor:pointer; background:#2a2a30; color:#eee; }
   button.primary { background:var(--accent); color:#fff; font-weight:600; }
   button:hover { filter:brightness(1.1); }
+  button:disabled { opacity:.5; cursor:default; filter:none; }
   #now { display:flex; gap:14px; align-items:center; margin-top:22px; padding:12px; border-radius:12px; background:#141417; }
   #now img { width:64px; height:64px; border-radius:8px; background:#2a2a30; object-fit:cover; }
   #nowTitle { font-weight:600; }
@@ -68,11 +69,9 @@ const $ = (id) => document.getElementById(id);
 const token = new URLSearchParams(location.search).get("t");
 if (!token) $("noToken").hidden = false;
 
-// --- Sound: autoplay policy -------------------------------------------------------------------
-// MusicKit requires its play() to be called DURING a real click at least once. A click anywhere else on
-// the page is not enough, so sound only counts as unlocked once playback has actually started.
 let unlocked = false;   // playback has really started in this tab
-let primed = false;     // button clicked while the queue was empty: try to play directly next time
+let primed = false;     // media pool filled during a click while the queue was empty: try to play directly next time
+let blessMedia = null;  // set once MusicKit is configured; must be called synchronously inside a user gesture
 let pendingTitle = null;
 const unlockListeners = [];
 window.audioUnlocked = () => unlocked;
@@ -99,21 +98,27 @@ const markUnlocked = () => {
   unlockListeners.forEach((l) => l());
 };
 
+const onPageGesture = (e) => {
+  if (!e.isTrusted || !blessMedia || unlocked) return;
+  blessMedia();
+  primed = true;
+};
+document.addEventListener("pointerdown", onPageGesture, true);
+document.addEventListener("keydown", onPageGesture, true);
+
+$("gestureBtn").disabled = true; // enabled once MusicKit is ready (a click before that would do nothing)
 $("gestureBtn").onclick = () => {
   const music = window.__music;
-  if (!music) return;
-  // play() must run directly inside the click, with no await before it (required by MusicKit and Safari).
+  if (!music || !blessMedia) return;
+  // Everything below must run directly inside the click, with no await before it (required by Safari).
+  blessMedia();
+  primed = true;
   if (music.queue && !music.queue.isEmpty) {
     const p = music.play();
-    Promise.resolve(p).catch((e) => { console.warn("[AppleCraft] playback on click rejected", e); showGesture(); });
+    Promise.resolve(p).catch((e) => { console.warn("[AppleCraft] playback on click rejected", e); primed = false; showGesture(); });
     return;
   }
-  // Empty queue: "wake up" MusicKit's media element; the next track will try to start on its own.
-  document.querySelectorAll("audio, video").forEach((el) => {
-    const p = el.play();
-    p?.then(() => el.pause()).catch(() => {});
-  });
-  primed = true;
+  // Empty queue: the next track sent by Minecraft will start on its own.
   $("gestureBtn").textContent = "✓  Prêt : lance une musique depuis Minecraft";
 };
 
@@ -147,7 +152,14 @@ document.addEventListener("musickitloaded", async () => {
     });
     const music = MusicKit.getInstance();
 
+    const defer = music.deferPlayback.bind(music);
+    blessMedia = () => defer();
+    music.deferPlayback = () => {
+      if (navigator.userActivation ? navigator.userActivation.isActive : true) defer();
+    };
+
     window.__music = music;
+    $("gestureBtn").disabled = false;
     // Unlocked as soon as playback really starts.
     music.addEventListener("playbackStateDidChange", () => { if (music.isPlaying) markUnlocked(); });
     // Playback errors land here instead of MusicKit's dialog.
